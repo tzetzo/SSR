@@ -12,7 +12,8 @@ const app = express();
 app.use(
   "/api",
   proxy("http://react-ssr-api.herokuapp.com", {
-    proxyReqOptDecorator(opts) { // this second param is only applicable to this specific API Server; do not use with other API Servers
+    proxyReqOptDecorator(opts) {
+      // this second param is only applicable to this specific API Server; do not use with other API Servers
       opts.headers["x-forwarded-host"] = "localhost:3000";
       return opts;
     },
@@ -23,7 +24,7 @@ app.use(
 app.use(express.static("public"));
 
 app.get("*", (req, res) => {
-  const store = createStore(req.get('cookie'));
+  const store = createStore(req.get("cookie"));
 
   // Logic to initialize and load data into the store
   const promises = matchRoutes(Routes, req.path).map(({ route }) => {
@@ -32,7 +33,14 @@ app.get("*", (req, res) => {
   });
 
   Promise.all(promises).then(() => {
-    res.send(renderer(req.path, store));
+    const context = {};
+    const content = renderer(req.path, store, context);
+
+    if (context.notFound) {
+      res.status(404);
+    }
+
+    res.send(content);
   });
 });
 
